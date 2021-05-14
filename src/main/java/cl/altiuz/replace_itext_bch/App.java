@@ -161,9 +161,9 @@ public class App {
 		pdd.setKeywords("Muestra, primer ejemplo, pdf");
 		document.save(RESOURCE_DIRECTORY.toAbsolutePath() + "\\pdfMetadataPdfBox.pdf");
 		System.out.println("PDF con Metadata: " + RESOURCE_DIRECTORY.toAbsolutePath() + "\\pdfMetadataPdfBox.pdf");
+		PDStream contents = new PDStream(document);
 		document.close();
-		return null;
-
+		return contents.toByteArray();
 	}
 
 }
