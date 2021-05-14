@@ -9,17 +9,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.pdfbox.io.MemoryUsageSetting;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
 
 import com.itextpdf.text.Document;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.pdf.ColumnText;
-import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSmartCopy;
 import com.itextpdf.text.pdf.PdfStamper;
@@ -36,26 +38,13 @@ public class App {
 	public static void main(String[] args) throws IOException {
 		System.out.println("Hello World!");
 
-		try {
-			getPdf();
-		} catch (com.itextpdf.text.DocumentException e) {
-			System.out.println(e + "message1");
-			e.printStackTrace();
-		}
-
-		/*
-		 * String pathFul = "C:\\Users\\jhernandez\\Desktop\\reportes\\persona.pdf";
-		 * String pathOutput = "C:\\Users\\jhernandez\\Desktop\\reportes\\prueba.pdf";
-		 * byte[] pdfFull = convertPDFToByteArray(pathFul); byte[] output =
-		 * convertPDFToByteArray(pathOutput);
-		 * 
-		 * try { concatPdf(pdfFull, output); } catch (IOException e) {
-		 * 
-		 * System.out.println(e + "message1"); e.printStackTrace(); } catch
-		 * (DocumentException e) { System.out.println(e + "message2");
-		 * e.printStackTrace(); } catch (com.itextpdf.text.DocumentException e) {
-		 * System.out.println(e + "message3"); e.printStackTrace(); }
-		 */
+		// concatPdf2();
+		// editMetadataPdfBox();
+		String pathFul = "C:\\Users\\jhernandez\\Desktop\\reportes\\persona.pdf";
+		String pathOutput = "C:\\Users\\jhernandez\\Desktop\\reportes\\prueba.pdf";
+		byte[] pdfFull = convertPDFToByteArray(pathFul);
+		byte[] output = convertPDFToByteArray(pathOutput);
+		concatPdfBox(pdfFull, output);
 
 	}
 
@@ -84,6 +73,74 @@ public class App {
 		out.write(baos.toByteArray());
 		out.close();
 		return baos.toByteArray();
+	}
+
+	public static byte[] getPdf() throws IOException, com.itextpdf.text.DocumentException {
+
+		byte[] pdfFull = null;
+		if (pdfFull == null) {
+			System.out.println("pdf no habilitado");
+		}
+		final PdfReader reader = new PdfReader("C:\\Users\\jhernandez\\Desktop\\reportes\\resultadoConcatenacion.pdf");
+		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		final PdfStamper pdfStamper = new PdfStamper(reader, (OutputStream) baos);
+		final HashMap<String, String> info = new HashMap<>(2);
+		info.put(PDF_PROP_CREATOR, "Altiuz Reports");
+		info.put(PDF_PROP_AUTHOR, "george");
+		pdfStamper.setMoreInfo(info);
+		final ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+		final XmpWriter xmp = new XmpWriter((OutputStream) baos2, (Map<String, String>) info);
+		xmp.close();
+		pdfStamper.setXmpMetadata(baos2.toByteArray());
+
+		pdfStamper.close();
+		reader.close();
+		pdfFull = baos.toByteArray();
+		OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\pdfMetadata.pdf");
+		out.write(pdfFull);
+		out.close();
+		return pdfFull;
+	}
+
+	private static byte[] editMetadataPdfBox() throws IOException {
+		// Creating PDF document object
+		// Creating PDF document object
+		PDDocument document = new PDDocument();
+		PDPage blankPage = new PDPage();
+		document.addPage(blankPage);
+		PDDocumentInformation pdd = document.getDocumentInformation();
+		pdd.setAuthor("George");
+		pdd.setTitle("Prueba titulo");
+		pdd.setCreator("Altiuz Report");
+		pdd.setSubject("Ejemplo documento");
+		Calendar date = new GregorianCalendar();
+		date.set(2021, 11, 5);
+		pdd.setCreationDate(date);
+		date.set(2021, 6, 5);
+		pdd.setModificationDate(date);
+		pdd.setKeywords("Muestra, primer ejemplo, pdf");
+		document.save("C:\\Users\\jhernandez\\Desktop\\reportes\\doc_atributes.pdf");
+		System.out.println("Properties added successfully ");
+		document.close();
+		return null;
+
+	}
+
+	private static void concatPdfBox(final byte[] mainPdf, final byte[] newPd) throws IOException {
+
+		// Instantiating PDFMergerUtility class
+		PDFMergerUtility PDFmerger = new PDFMergerUtility();
+
+		// Setting the destination file
+
+		// adding the source files
+		PDFmerger.addSource(new ByteArrayInputStream(mainPdf));
+		PDFmerger.addSource(new ByteArrayInputStream(newPd));
+		PDFmerger.setDestinationFileName("C:\\Users\\jhernandez\\Desktop\\reportes\\merge.pdf");
+		// Merging the two documents
+
+		PDFmerger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+		System.out.println(PDFmerger.getDestinationStream());
 	}
 
 	private static byte[] convertPDFToByteArray(String path) {
@@ -116,51 +173,6 @@ public class App {
 			}
 		}
 		return baos.toByteArray();
-	}
-
-	public static byte[] getPdf() throws IOException, com.itextpdf.text.DocumentException {
-
-		byte[] pdfFull = null;
-		if (pdfFull == null) {
-			System.out.println("pdf no habilitado");
-		}
-		final PdfReader reader = new PdfReader("C:\\Users\\jhernandez\\Desktop\\reportes\\resultadoConcatenacion.pdf");
-		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		final PdfStamper pdfStamper = new PdfStamper(reader, (OutputStream) baos);
-		final HashMap<String, String> info = new HashMap<>(2);
-		info.put(PDF_PROP_CREATOR, "Altiuz Reports");
-		info.put(PDF_PROP_AUTHOR, "george");
-		pdfStamper.setMoreInfo(info);
-		final ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-		final XmpWriter xmp = new XmpWriter((OutputStream) baos2, (Map<String, String>) info);
-		xmp.close();
-		pdfStamper.setXmpMetadata(baos2.toByteArray());
-
-		pdfStamper.close();
-		reader.close();
-		pdfFull = baos.toByteArray();
-		OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\pdfMetadata.pdf");
-		out.write(pdfFull);
-		out.close();
-		return pdfFull;
-	}
-
-	public static void getPF2() throws com.itextpdf.text.DocumentException {
-		try {
-			final HashMap<String, String> info = new HashMap<>(2);
-			info.put(PDF_PROP_CREATOR, "Altiuz Reports");
-			info.put(PDF_PROP_AUTHOR, "george");
-			System.out.println("info" + info);
-			PdfReader pdfReader = new PdfReader("C:\\Users\\jhernandez\\Desktop\\persona30.pdf");
-			PdfStamper pdfStamper = new PdfStamper(pdfReader,
-					new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\persona5.pdf"));
-			PdfContentByte canvas = pdfStamper.getOverContent(1);
-			ColumnText.showTextAligned(canvas, Element.ALIGN_LEFT, new Phrase("Hello people!"), 250, 750, 0);
-			pdfStamper.close();
-			pdfReader.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 }
