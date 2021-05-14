@@ -130,17 +130,23 @@ public class App {
 
 		// Instantiating PDFMergerUtility class
 		PDFMergerUtility PDFmerger = new PDFMergerUtility();
+		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
 		// Setting the destination file
 
 		// adding the source files
 		PDFmerger.addSource(new ByteArrayInputStream(mainPdf));
 		PDFmerger.addSource(new ByteArrayInputStream(newPd));
-		PDFmerger.setDestinationFileName("C:\\Users\\jhernandez\\Desktop\\reportes\\merge.pdf");
+		//PDFmerger.setDestinationFileName("C:\\Users\\jhernandez\\Desktop\\reportes\\merge.pdf");
 		// Merging the two documents
-
+		PDFmerger.setDestinationStream(baos);
 		PDFmerger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
-		System.out.println(PDFmerger.getDestinationStream());
+		//OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\pdfMetadata33.pdf");
+		//out.write(baos.toByteArray());
+		//out.close();
+		System.out.println(baos);
+		System.out.println(baos.toByteArray());
+
 	}
 
 	private static byte[] convertPDFToByteArray(String path) {
