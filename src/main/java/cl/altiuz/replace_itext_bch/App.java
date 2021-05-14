@@ -1,14 +1,17 @@
 package cl.altiuz.replace_itext_bch;
 
+import cl.altiuz.replace_itext_bch.utils.Utils;
+
+import java.awt.Desktop;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -19,6 +22,7 @@ import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.dom4j.DocumentException;
 
 import com.itextpdf.text.Document;
@@ -27,35 +31,55 @@ import com.itextpdf.text.pdf.PdfSmartCopy;
 import com.itextpdf.text.pdf.PdfStamper;
 import com.itextpdf.text.xml.xmp.XmpWriter;
 
-/**
- * Hello world!
- *
- */
 public class App {
 	private static final String PDF_PROP_CREATOR = "Creator";
 	private static final String PDF_PROP_AUTHOR = "Author";
+	private static final Path RESOURCE_DIRECTORY = Paths.get("src", "main", "resources");
+	private static final ClassLoader CLASS_LOADER = App.class.getClassLoader();
 
 	public static void main(String[] args) throws IOException {
-		System.out.println("Hello World!");
-
-		// concatPdf2();
-		// editMetadataPdfBox();
-		String pathFul = "C:\\Users\\jhernandez\\Desktop\\reportes\\persona.pdf";
-		String pathOutput = "C:\\Users\\jhernandez\\Desktop\\reportes\\prueba.pdf";
-		byte[] pdfFull = convertPDFToByteArray(pathFul);
-		byte[] output = convertPDFToByteArray(pathOutput);
-		concatPdfBox(pdfFull, output);
-
+		try {
+			System.out.println("Proyecto demo para remplazar libreria ItextPdf por PdfBox en AR");
+			Desktop.getDesktop().open(new File(RESOURCE_DIRECTORY.toString()));
+			initItextPdf();
+			initPdfBox();
+			System.out.println("--END--");
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println(e.getMessage());
+		}
 	}
 
-	private static byte[] concatPdf(final byte[] mainPdf, final byte[] newPdf)
-			throws IOException, DocumentException, com.itextpdf.text.DocumentException {
+	private static void initItextPdf() throws IOException, DocumentException, com.itextpdf.text.DocumentException {
+		System.out.println("--Init ItextPdf--");
+		String pathFul = URLDecoder.decode(CLASS_LOADER.getResource("sample.pdf").getPath().substring(1), "UTF-8");
+		String pathOutput = URLDecoder.decode(CLASS_LOADER.getResource("sample2.pdf").getPath().substring(1), "UTF-8");
+		byte[] pdfFull = Utils.convertPDFToByteArray(pathFul);
+		byte[] output = Utils.convertPDFToByteArray(pathOutput);
+		concatPdfItext(pdfFull, output);
+		getPdfItext();
+	}
 
-		final PdfReader mainReader = new PdfReader((InputStream) new ByteArrayInputStream(mainPdf));
-		final PdfReader newReader = new PdfReader((InputStream) new ByteArrayInputStream(newPdf));
+	private static void initPdfBox() throws IOException, DocumentException {
+		System.out.println("--Init PdfBox--");
+		String pathFul = URLDecoder.decode(CLASS_LOADER.getResource("sample.pdf").getPath().substring(1), "UTF-8");
+		String pathOutput = URLDecoder.decode(CLASS_LOADER.getResource("sample2.pdf").getPath().substring(1), "UTF-8");
+		byte[] pdfFull = Utils.convertPDFToByteArray(pathFul);
+		byte[] output = Utils.convertPDFToByteArray(pathOutput);
+		concatPdfBox(pdfFull, output);
+		editMetadataPdfBox();
+	}
+
+	/*
+	 * Lib ItextPdf
+	 */
+	private static byte[] concatPdfItext(final byte[] mainPdf, final byte[] newPdf)
+			throws IOException, DocumentException, com.itextpdf.text.DocumentException {
+		final PdfReader mainReader = new PdfReader(new ByteArrayInputStream(mainPdf));
+		final PdfReader newReader = new PdfReader(new ByteArrayInputStream(newPdf));
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		final Document document = new Document();
-		final PdfSmartCopy copy = new PdfSmartCopy(document, (OutputStream) baos);
+		final PdfSmartCopy copy = new PdfSmartCopy(document, baos);
 		copy.setFullCompression();
 		copy.setCompressionLevel(9);
 		document.open();
@@ -69,19 +93,17 @@ public class App {
 		copy.close();
 		newReader.close();
 		mainReader.close();
-		OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\reportes\\resultadoConcatenacion.pdf");
+		OutputStream out = new FileOutputStream(RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergeItext.pdf");
 		out.write(baos.toByteArray());
 		out.close();
+		System.out.println("PDF Concatenado: " + RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergeItext.pdf");
 		return baos.toByteArray();
 	}
 
-	public static byte[] getPdf() throws IOException, com.itextpdf.text.DocumentException {
-
+	public static byte[] getPdfItext() throws IOException, com.itextpdf.text.DocumentException {
 		byte[] pdfFull = null;
-		if (pdfFull == null) {
-			System.out.println("pdf no habilitado");
-		}
-		final PdfReader reader = new PdfReader("C:\\Users\\jhernandez\\Desktop\\reportes\\resultadoConcatenacion.pdf");
+		/* if (pdfFull == null) { System.out.println("pdf no habilitado"); } */
+		final PdfReader reader = new PdfReader(RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergeItext.pdf");
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		final PdfStamper pdfStamper = new PdfStamper(reader, (OutputStream) baos);
 		final HashMap<String, String> info = new HashMap<>(2);
@@ -92,20 +114,38 @@ public class App {
 		final XmpWriter xmp = new XmpWriter((OutputStream) baos2, (Map<String, String>) info);
 		xmp.close();
 		pdfStamper.setXmpMetadata(baos2.toByteArray());
-
 		pdfStamper.close();
 		reader.close();
 		pdfFull = baos.toByteArray();
-		OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\pdfMetadata.pdf");
+		OutputStream out = new FileOutputStream(RESOURCE_DIRECTORY.toAbsolutePath() + "\\pdfMetadataItext.pdf");
+		System.out.println("PDF con Metadata: " + RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergeItext.pdf");
 		out.write(pdfFull);
 		out.close();
 		return pdfFull;
 	}
 
+	/*
+	 * Lib PdfBox
+	 */
+	private static byte[] concatPdfBox(final byte[] mainPdf, final byte[] newPd) throws IOException {
+		// Instantiating PDFMergerUtility class
+		PDFMergerUtility PDFmerger = new PDFMergerUtility();
+		// adding the source files
+		PDFmerger.addSource(new ByteArrayInputStream(mainPdf));
+		PDFmerger.addSource(new ByteArrayInputStream(newPd));
+		// Setting the destination file
+		PDFmerger.setDestinationFileName(RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergePdfBox.pdf");
+		// Merging the two documents
+		PDFmerger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
+		System.out.println("PDF Concatenado: " + PDFmerger.getDestinationFileName());
+		// Reading merged document and converting it to Byte []
+		PDDocument mergedPdf = PDDocument.load(new File(RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergePdfBox.pdf"));
+		PDStream contents = new PDStream(mergedPdf);
+		return contents.toByteArray();
+	}
+
 	private static byte[] editMetadataPdfBox() throws IOException {
-		// Creating PDF document object
-		// Creating PDF document object
-		PDDocument document = new PDDocument();
+		PDDocument document = PDDocument.load(new File(RESOURCE_DIRECTORY.toAbsolutePath() + "\\mergePdfBox.pdf"));
 		PDPage blankPage = new PDPage();
 		document.addPage(blankPage);
 		PDDocumentInformation pdd = document.getDocumentInformation();
@@ -119,66 +159,11 @@ public class App {
 		date.set(2021, 6, 5);
 		pdd.setModificationDate(date);
 		pdd.setKeywords("Muestra, primer ejemplo, pdf");
-		document.save("C:\\Users\\jhernandez\\Desktop\\reportes\\doc_atributes.pdf");
-		System.out.println("Properties added successfully ");
+		document.save(RESOURCE_DIRECTORY.toAbsolutePath() + "\\pdfMetadataPdfBox.pdf");
+		System.out.println("PDF con Metadata: " + RESOURCE_DIRECTORY.toAbsolutePath() + "\\pdfMetadataPdfBox.pdf");
 		document.close();
 		return null;
 
-	}
-
-	private static void concatPdfBox(final byte[] mainPdf, final byte[] newPd) throws IOException {
-
-		// Instantiating PDFMergerUtility class
-		PDFMergerUtility PDFmerger = new PDFMergerUtility();
-		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-		// Setting the destination file
-
-		// adding the source files
-		PDFmerger.addSource(new ByteArrayInputStream(mainPdf));
-		PDFmerger.addSource(new ByteArrayInputStream(newPd));
-		//PDFmerger.setDestinationFileName("C:\\Users\\jhernandez\\Desktop\\reportes\\merge.pdf");
-		// Merging the two documents
-		PDFmerger.setDestinationStream(baos);
-		PDFmerger.mergeDocuments(MemoryUsageSetting.setupTempFileOnly());
-		//OutputStream out = new FileOutputStream("C:\\Users\\jhernandez\\Desktop\\pdfMetadata33.pdf");
-		//out.write(baos.toByteArray());
-		//out.close();
-		System.out.println(baos);
-		System.out.println(baos.toByteArray());
-
-	}
-
-	private static byte[] convertPDFToByteArray(String path) {
-
-		InputStream inputStream = null;
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		try {
-
-			inputStream = new FileInputStream(path);
-
-			byte[] buffer = new byte[1024];
-			baos = new ByteArrayOutputStream();
-
-			int bytesRead;
-			while ((bytesRead = inputStream.read(buffer)) != -1) {
-				baos.write(buffer, 0, bytesRead);
-			}
-
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (inputStream != null) {
-				try {
-					inputStream.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		return baos.toByteArray();
 	}
 
 }
